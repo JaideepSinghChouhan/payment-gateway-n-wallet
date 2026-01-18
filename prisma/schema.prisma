@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  wallet Wallet?
+  transactions Transaction[] @relation("initiatedTransactions")
+  idempotencyKeys IdempotencyKey[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Decimal  @default(0)
+  currency  String   @default("INR")
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id])
+  ledgerEntries LedgerEntry[]
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  type      TransactionType
+  status    TransactionStatus
+  amount    Decimal
+  currency  String
+  referenceId String? @unique
+  createdAt DateTime @default(now())
+
+  initiatorUserId String?
+  initiator User? @relation("initiatedTransactions", fields: [initiatorUserId], references: [id])
+
+  ledgerEntries LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  transactionId String
+  walletId      String
+  entryType     EntryType
+  amount        Decimal
+  currency      String
+  createdAt     DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  wallet      Wallet      @relation(fields: [walletId], references: [id])
+}
+
+model IdempotencyKey {
+  key        String
+  userId     String
+  endpoint   String
+  requestHash String
+  response   Json?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([key, userId, endpoint])
+}
+
+/* ENUMS */
+
+enum TransactionType {
+  P2P
+  PAYMENT
+  REFUND
+  TOPUP
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
