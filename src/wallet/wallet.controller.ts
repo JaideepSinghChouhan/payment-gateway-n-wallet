@@ -1,7 +1,7 @@
 import { getWalletBalance } from './wallet.service';
 
 export async function getBalance(req:any,res:any){
-    const userId = req.user.id;
+    const userId = req.userId;
     try{
         const wallet = await getWalletBalance(userId);
         res.json({ 
