@@ -12,63 +12,67 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  wallet Wallet?
-  transactions Transaction[] @relation("initiatedTransactions")
+  wallet          Wallet?
+  transactions    Transaction[]    @relation("initiatedTransactions")
   idempotencyKeys IdempotencyKey[]
+  merchant        Merchant?
 }
 
 model Wallet {
-  id          String      @id @default(uuid())
-  userId      String?     @unique
-  merchantId  String?     @unique
-  balance     Decimal
-  currency    String
-  type        WalletType  @default(USER)
+  id             String     @id @default(uuid())
+  userId         String?    @unique
+  merchantId     String?    @unique
+  balance        Decimal
+  pendingBalance Decimal    @default(0)
+  currency       String
+  type           WalletType @default(USER)
 
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  merchant    Merchant?   @relation("MerchantWallet", fields: [merchantId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation("MerchantWallet", fields: [merchantId], references: [id])
 
-  createdAt    DateTime @default(now())
+  createdAt     DateTime      @default(now())
   ledgerEntries LedgerEntry[]
 }
 
-
-
 model Transaction {
-  id        String   @id @default(uuid())
-  type      TransactionType
-  status    TransactionStatus
-  amount    Decimal
-  currency  String
-  referenceId String? @unique
-  createdAt DateTime @default(now())
+  id          String            @id @default(uuid())
+  type        TransactionType
+  status      TransactionStatus
+  amount      Decimal
+  currency    String
+  referenceId String?           @unique
+  createdAt   DateTime          @default(now())
 
   initiatorUserId String?
-  initiator User? @relation("initiatedTransactions", fields: [initiatorUserId], references: [id])
+  orderId         String? @unique
+
+  initiator User?         @relation("initiatedTransactions", fields: [initiatorUserId], references: [id])
+  order     PaymentOrder? @relation(fields: [orderId], references: [id])
+
   refundedTransactionId String? //link to original
-  ledgerEntries LedgerEntry[]
+  ledgerEntries         LedgerEntry[]
 }
 
 model LedgerEntry {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   transactionId String
   walletId      String
   entryType     EntryType
   amount        Decimal
   currency      String
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
   transaction Transaction @relation(fields: [transactionId], references: [id])
   wallet      Wallet      @relation(fields: [walletId], references: [id])
 }
 
 model IdempotencyKey {
-  key        String
-  userId     String
-  endpoint   String
+  key         String
+  userId      String
+  endpoint    String
   requestHash String
-  response   Json?
-  createdAt  DateTime @default(now())
+  response    Json?
+  createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -76,30 +80,35 @@ model IdempotencyKey {
 }
 
 model Merchant {
-  id            String   @id @default(uuid())
-  name          String
-  apiKey        String   @unique
-  createdAt     DateTime @default(now())
+  id        String   @id @default(uuid())
+  name      String
+  apiKey    String   @unique
+  flatFee   Decimal  @default(20)
+  createdAt DateTime @default(now())
 
-  wallet        Wallet?  @relation("MerchantWallet")
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  wallet        Wallet?        @relation("MerchantWallet")
   paymentOrders PaymentOrder[]
 }
 
-
 model PaymentOrder {
-  id         String   @id @default(uuid())
+  id         String             @id @default(uuid())
   merchantId String
   amount     Decimal
   currency   String
   status     PaymentOrderStatus @default(CREATED)
-  createdAt  DateTime @default(now())
+  createdAt  DateTime           @default(now())
 
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  transaction Transaction?
 }
 
-
-
-/* ENUMS */
+/**
+ * ENUMS
+ */
 
 enum PaymentOrderStatus {
   CREATED
@@ -113,6 +122,7 @@ enum TransactionType {
   PAYMENT
   REFUND
   TOPUP
+  WITHDRAWL
 }
 
 enum TransactionStatus {
@@ -129,4 +139,5 @@ enum EntryType {
 enum WalletType {
   USER
   SYSTEM
+  MERCHANT
 }

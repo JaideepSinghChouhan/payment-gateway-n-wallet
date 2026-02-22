@@ -5,7 +5,6 @@ import { lockWallet } from "../wallet/wallet.service";
 import { createLedgerEntry } from "../ledger/ledger.service";
 import { Prisma } from "@prisma/client";
 
-const PLATFORM_FLAT_FEE = new Prisma.Decimal(20); // Flat fee charged by the platform per transaction
 
 export async function payOrder(
     data:{
@@ -14,7 +13,8 @@ export async function payOrder(
         idempotencyKey : string
     })
 {
-    return prisma.$transaction(async (tx) =>{
+
+    const result = await prisma.$transaction(async (tx) =>{
         // 1 Check for idempotency
         const cached = await tx.idempotencyKey.findUnique({
             where:
@@ -37,6 +37,15 @@ export async function payOrder(
         }
         if(order.status !== "CREATED")
             throw new AppError("Order already processed", 400);
+
+        const merchant = await tx.merchant.findUnique({
+            where : {id : order.merchantId}
+        })
+        if(!merchant){
+            throw new AppError("Merchant not found", 404);
+        }
+        
+        const PLATFORM_FLAT_FEE = merchant.flatFee;
 
         const totalAmount = order.amount;
         const amountToMerchant = totalAmount.minus(PLATFORM_FLAT_FEE);
@@ -87,6 +96,7 @@ export async function payOrder(
                 amount : order.amount,
                 currency : order.currency,
                 initiatorUserId : data.userId,
+                orderId : order.id,
             }
         })
 
@@ -119,21 +129,27 @@ export async function payOrder(
         await tx.wallet.update({
             where : {id : userWallet.id},
             data : {
-                balance : userWallet.balance.minus(totalAmount)
+                balance : {
+                    decrement: totalAmount
+                }
             }
         })
 
         await tx.wallet.update({
             where : {id : merchantWallet.id},
             data : {
-                balance : merchantWallet.balance.plus(amountToMerchant)
+                pendingBalance: {
+                increment: amountToMerchant
+                }
             }
         })
 
         await tx.wallet.update({
             where : {id : platformWallet.id},
             data : {
-                balance : platformWallet.balance.plus(PLATFORM_FLAT_FEE)
+                balance : {
+                    increment: PLATFORM_FLAT_FEE
+                }
             }
         })
 
@@ -161,10 +177,10 @@ export async function payOrder(
                 response: { status :"SUCCESS" , transactionId : transaction.id }
             }
         })
-        
+
         return { status :"SUCCESS" , transactionId : transaction.id };
 
     });
-
+    return result;
     
 }

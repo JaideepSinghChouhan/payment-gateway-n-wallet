@@ -1,5 +1,5 @@
-import { registerUser , loginUser } from "./auth.service.ts";
-import { generateAccessToken,generateRefreshToken, verifyRefreshToken } from "./jwt.ts";  
+import { registerUser , loginUser } from "./auth.service";
+import { generateAccessToken,generateRefreshToken, verifyRefreshToken } from "./jwt";  
 
 
 export async function register(req:any,res:any){

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Merchant" ADD COLUMN     "flatFee" DECIMAL(65,30) NOT NULL DEFAULT 20;

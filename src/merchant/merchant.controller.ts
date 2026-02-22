@@ -2,11 +2,12 @@ import { prisma } from "../infra/prisma";
 import { createMerchant } from "./merchant.service";
 
 export async function createMerchantController(req:any, res:any){
+    const userId = req.userId; // Assuming auth middleware sets req.user
     const {name} = req.body;
     if(!name){
         return res.status(400).json({error : "Name is required"});
     }
-    const merchant = await createMerchant(name);
+    const merchant = await createMerchant(userId,name);
     res.json(merchant);
 }
 

@@ -1,5 +1,5 @@
-import { prisma } from "../infra/prisma.ts";
-import { hashPassword , comparePassword } from "./password.ts";
+import { prisma } from "../infra/prisma";
+import { hashPassword , comparePassword } from "./password";
 import jwt from "jsonwebtoken";
 
 export async function registerUser(
