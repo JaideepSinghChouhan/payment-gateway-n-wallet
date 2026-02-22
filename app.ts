@@ -53,6 +53,7 @@ app.use((err: any, req: any, res: any, next: any) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
+const PORT = process.env.PORT || 3000;
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
