@@ -33,6 +33,10 @@ app.use(cors()); //for now will allow all origins, in production specify the fro
 //   credentials: true
 // }));
 
+app.get("/", (req, res) => {
+  res.json({ status: "Server Running 🚀" });
+});
+
 
 app.use('/auth', authRouter);
 app.use('/webhooks', webhookRouter);
