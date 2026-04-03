@@ -17,21 +17,21 @@ dotenv.config();
 
 
 const app = express();
+
+app.use(cors({ 
+  origin: "http://localhost:5173", //frontend url
+  credentials: true
+}));
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 500,
+  skip: (req) => req.path === '/auth/me' || req.path === '/auth/refresh'
 });
 
 app.use(limiter);
 app.use(cookieParser());
 app.use(express.json());
-
-app.use(cors()); //for now will allow all origins, in production specify the frontend url
-
-// app.use(cors({ 
-//   origin: "*", //frontend url
-//   credentials: true
-// }));
 
 app.get("/", (req, res) => {
   res.json({ status: "Server Running 🚀" });
@@ -47,6 +47,28 @@ app.use('/merchant',authRouter, merchant);
 app.use('/payment', authRouter, payment);
 
 startSettlementJob();
+
+// Seed required system wallets on startup (idempotent)
+async function seedSystemWallets() {
+  const { prisma } = await import('./src/infra/prisma');
+  const { Prisma } = await import('@prisma/client');
+  
+  await prisma.wallet.upsert({
+    where: { id: 'bank-wallet' },
+    update: {},
+    create: { id: 'bank-wallet', balance: new Prisma.Decimal(1_000_000), pendingBalance: new Prisma.Decimal(0), currency: 'INR' }
+  });
+  
+  await prisma.wallet.upsert({
+    where: { id: 'platform-wallet' },
+    update: {},
+    create: { id: 'platform-wallet', balance: new Prisma.Decimal(0), pendingBalance: new Prisma.Decimal(0), currency: 'INR' }
+  });
+  
+  console.log('✅ System wallets ready');
+}
+
+seedSystemWallets().catch(console.error);
 
 app.use((err: any, req: any, res: any, next: any) => {
   if (err instanceof AppError) {

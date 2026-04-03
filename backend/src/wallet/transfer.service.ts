@@ -38,11 +38,20 @@ export async function transferMoney(data: {
         const sender = await tx.wallet.findUnique({
         where: { userId : data.fromUserId },
         });
+
+        // Resolve receiver: if they passed an N-Wallet ID, look it up by nWalletId
+        let receiverWalletQuery = { userId: data.toUserId };
+        if (data.toUserId.includes("@nwallet")) {
+            const receiverUser = await tx.user.findUnique({ where: { nWalletId: data.toUserId } });
+            if (!receiverUser) throw new AppError("Recipient N-Wallet ID not found");
+            receiverWalletQuery = { userId: receiverUser.id };
+        }
+
         const receiver = await tx.wallet.findUnique({
-            where: { userId : data.toUserId },
+            where: receiverWalletQuery,
         })
         if(!sender) throw new Error('Sender wallet not found');
-        if(!receiver) throw new Error('Receiver wallet not found');
+        if(!receiver) throw new AppError('Receiver wallet not found', 404);
 
         // 3.Create Business Transaction
         const transaction = await tx.transaction.create({

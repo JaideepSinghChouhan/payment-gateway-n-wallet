@@ -10,6 +10,7 @@ export async function getWalletBalance(userId: string){
         select:{
             id: true,
             balance: true,
+            pendingBalance: true,
             currency: true
         }
     })

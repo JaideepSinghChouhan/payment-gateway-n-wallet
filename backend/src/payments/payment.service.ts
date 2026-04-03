@@ -63,28 +63,26 @@ export async function payOrder(
         })
 
         const platformWallet = await tx.wallet.findFirst({
-        where: { 
-            id : "platform-wallet"
-            }
+            where: { id : "platform-wallet" }
         });
-
-        if (!platformWallet) throw new Error("Platform wallet missing");
 
         if(!userWallet || !merchantWallet){
             throw new AppError("Wallet not found", 404);
         }
+
+        // If platform wallet doesn't exist yet, use zero fee and skip platform credit
+        const hasPlatformWallet = !!platformWallet;
 
         if(userWallet.balance.lessThan(order.amount)){
             throw new AppError("Insufficient balance", 400);
         }
 
         //Lock the wallets for update
-
-        const wallets = [userWallet, merchantWallet, platformWallet]
-        .sort((a, b) => a.id.localeCompare(b.id));
+        const wallets = [userWallet, merchantWallet, ...(hasPlatformWallet ? [platformWallet!] : [])]
+          .sort((a, b) => a.id.localeCompare(b.id));
 
         for (const wallet of wallets) {
-        await lockWallet(tx, wallet.id);
+          await lockWallet(tx, wallet.id);
         }
 
 
@@ -117,13 +115,15 @@ export async function payOrder(
             entryType : "CREDIT",
         })
 
-        await createLedgerEntry(tx,{
-            transactionId : transaction.id,
-            walletId : platformWallet.id,
-            amount : PLATFORM_FLAT_FEE,
-            currency : order.currency,
-            entryType : "CREDIT",
-        })
+        if (hasPlatformWallet && PLATFORM_FLAT_FEE.greaterThan(0)) {
+          await createLedgerEntry(tx,{
+              transactionId : transaction.id,
+              walletId : platformWallet!.id,
+              amount : PLATFORM_FLAT_FEE,
+              currency : order.currency,
+              entryType : "CREDIT",
+          })
+        }
 
         // Update wallets
         await tx.wallet.update({
@@ -144,14 +144,12 @@ export async function payOrder(
             }
         })
 
-        await tx.wallet.update({
-            where : {id : platformWallet.id},
-            data : {
-                balance : {
-                    increment: PLATFORM_FLAT_FEE
-                }
-            }
-        })
+        if (hasPlatformWallet && PLATFORM_FLAT_FEE.greaterThan(0)) {
+          await tx.wallet.update({
+              where : {id : platformWallet!.id},
+              data : { balance : { increment: PLATFORM_FLAT_FEE } }
+          })
+        }
 
         // Update transaction and order status
         await tx.transaction.update({

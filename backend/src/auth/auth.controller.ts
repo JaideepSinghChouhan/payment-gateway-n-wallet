@@ -1,11 +1,11 @@
-import { registerUser , loginUser } from "./auth.service";
+import { registerUser , loginUser, getUserById } from "./auth.service";
 import { generateAccessToken,generateRefreshToken, verifyRefreshToken } from "./jwt";  
 
 
 export async function register(req:any,res:any){
     const {email,password} = req.body;
     const {user,wallet} = await registerUser(email,password);
-    res.status(201).json({ user, wallet });
+    res.status(201).json({ user: { id: user.id, email: user.email, nWalletId: user.nWalletId, merchant: null }, wallet });
 }
 export async function login(req:any,res:any){
     const {email,password} = req.body;
@@ -25,7 +25,20 @@ export async function login(req:any,res:any){
         maxAge:7*24*60*60*1000,
     });
     
-    res.json({ message : "Login successful" });
+    const { prisma } = await import("../infra/prisma");
+    const merchant = await prisma.merchant.findUnique({
+        where: { userId: user.id },
+        select: { id: true, name: true, apiKey: true }
+    });
+    
+    // Auto-generate if missing (backfill)
+    let nWalletId = user.nWalletId;
+    if (!nWalletId) {
+        nWalletId = user.email.split('@')[0] + Math.floor(Math.random() * 1000) + '@nwallet';
+        await prisma.user.update({ where: { id: user.id }, data: { nWalletId } });
+    }
+
+    res.json({ message : "Login successful", user: { id: user.id, email: user.email, nWalletId, merchant: merchant || null } });
 }
 
 export function refresh(req:any,res:any){
@@ -55,4 +68,26 @@ export async function logout(req:any,res:any){
     res.json({ message : "Logged out successfully" });
 }
 
+export async function getMe(req:any, res:any) {
+    try {
+        const user = await getUserById(req.userId);
+        const { prisma } = await import("../infra/prisma");
+        
+        const merchant = await prisma.merchant.findUnique({
+            where: { userId: req.userId },
+            select: { id: true, name: true, apiKey: true }
+        });
+
+        // Auto-generate if missing
+        let nWalletId = user.nWalletId;
+        if (!nWalletId) {
+            nWalletId = user.email.split('@')[0] + Math.floor(Math.random() * 1000) + '@nwallet';
+            await prisma.user.update({ where: { id: user.id }, data: { nWalletId } });
+        }
+
+        res.json({ user: { id: user.id, email: user.email, nWalletId, merchant: merchant || null } });
+    } catch(err) {
+        res.status(404).json({ message: "User not found" });
+    }
+}
 
