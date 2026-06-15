@@ -34,6 +34,75 @@ It uses transactional ledger updates, idempotency keys, and webhook-based paymen
 - **Wallet locking**: Wallet rows are locked during balance updates to prevent concurrent modification issues.
 - **System wallets**: Bank and platform wallets are seeded automatically on startup.
 
+## Installation / Setup
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- PostgreSQL
+
+### Backend setup
+```bash
+cd backend
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma migrate dev
+npm run dev
+```
+
+### Frontend setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Run everything
+If the project is configured as a monorepo, start the backend and frontend in separate terminals.
+
+## Environment Variables
+
+Create a `.env` file in the backend with values similar to these:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/payment_gateway"
+JWT_SECRET="your_jwt_secret"
+JWT_EXPIRES_IN="7d"
+CLIENT_URL="http://localhost:5173"
+PORT=3000
+```
+
+Depending on your payment provider integration, you may also need:
+
+```env
+PAYMENT_PROVIDER_KEY="your_provider_key"
+WEBHOOK_SECRET="your_webhook_secret"
+```
+
+## Folder Structure
+
+```text
+.
+├── backend/
+│   ├── prisma/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── middlewares/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── utils/
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   └── services/
+│   └── package.json
+└── Readme.md
+```
+
 ## API Endpoints
 
 | Method | Route | Description |
@@ -50,6 +119,38 @@ It uses transactional ledger updates, idempotency keys, and webhook-based paymen
 | POST | `/payment/*` | Payment-related routes |
 | POST | `/merchant/*` | Merchant-related routes |
 | POST | `/admin/*` | Admin-related routes |
+
+## Usage Examples for Endpoints
+
+### Get wallet balance
+```bash
+curl -X GET http://localhost:3000/wallet/balance \
+  -H "Authorization: Bearer <token>"
+```
+
+### Top up wallet
+```bash
+curl -X POST http://localhost:3000/wallet/topup \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -H "idempotency-key: topup-123" \
+  -d '{"amount":1000}'
+```
+
+### Transfer money
+```bash
+curl -X POST http://localhost:3000/wallet/transfer \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -H "idempotency-key: transfer-123" \
+  -d '{"recipientId":"user_2","amount":500}'
+```
+
+### Fetch transactions
+```bash
+curl -X GET http://localhost:3000/transaction/transactions \
+  -H "Authorization: Bearer <token>"
+```
 
 ## Architecture Flow
 
