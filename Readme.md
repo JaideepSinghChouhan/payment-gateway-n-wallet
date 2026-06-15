@@ -1,6 +1,5 @@
 # Payment Gateway & N-Wallet
 
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%2B-61DAFB?logo=react&logoColor=black)](https://react.dev/)
@@ -236,15 +235,3 @@ curl -X GET http://localhost:3000/transaction/transactions \
 - Improve test coverage and CI automation
 - Add more merchant tooling and settlement visibility
 
-## Contributing
-
-Contributions are welcome.
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Open a pull request
-
-## License
-
-This project is licensed under the MIT License.
