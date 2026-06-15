@@ -1,18 +1,33 @@
 # Payment Gateway & N-Wallet
 
-A full-stack payment gateway and digital wallet platform for managing user balances, top-ups, peer-to-peer transfers, and payment confirmations.
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18%2B-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-It uses transactional ledger updates, idempotency keys, and webhook-based payment confirmation to keep money movement reliable and consistent.
+A modern payment gateway and digital wallet platform for secure money movement, balance tracking, and transaction management.
+
+It combines idempotent APIs, ACID-safe database transactions, and verified webhook processing to keep financial operations reliable.
+
+## Overview
+
+This project is built for developers who want a practical reference for:
+- wallet-based payment flows
+- top-up and transfer APIs
+- transaction ledger design
+- webhook-driven payment confirmation
+- safe, transactional money movement
 
 ## Tech Stack
 
 ### Backend
-- TypeScript
 - Node.js
 - Express.js
+- TypeScript
 - Prisma ORM
 - PostgreSQL
-- JWT Authentication
+- JWT authentication
 - bcrypt
 - cookie-parser
 - cors
@@ -27,14 +42,90 @@ It uses transactional ledger updates, idempotency keys, and webhook-based paymen
 
 ## Key Features
 
-- **Idempotency**: Top-up and transfer endpoints require an `idempotency-key` header to prevent duplicate processing.
-- **ACID-safe money movement**: Wallet transfers and top-ups run inside database transactions with wallet locking to avoid race conditions and keep balances consistent.
-- **Webhook verification flow**: Payment status is confirmed through the webhook flow before updating transaction and order status.
-- **Ledger-based accounting**: Every money movement creates matching debit/credit ledger entries.
-- **Wallet locking**: Wallet rows are locked during balance updates to prevent concurrent modification issues.
-- **System wallets**: Bank and platform wallets are seeded automatically on startup.
+- **Idempotency**: Top-up and transfer requests use an `idempotency-key` header to prevent duplicate processing.
+- **ACID-safe transactions**: Wallet operations run inside database transactions to ensure consistency.
+- **Webhook verification**: Payment updates are confirmed through webhook flows before final state changes are applied.
+- **Ledger-based accounting**: Every balance movement is recorded with matching debit and credit entries.
+- **Wallet locking**: Concurrent updates are controlled by row-level locking to avoid race conditions.
+- **Authentication**: Protected routes require valid user authentication.
+- **Operational safety**: Rate limiting and server-side validation help protect the API.
 
-## Installation / Setup
+## Screenshots
+
+> Add your UI screenshots here to make the project more portfolio-ready.
+
+| Screen | Preview |
+|---|---|
+| Dashboard | `./docs/screenshots/dashboard.png` |
+| Wallet Balance | `./docs/screenshots/wallet-balance.png` |
+| Transfer Flow | `./docs/screenshots/transfer-flow.png` |
+| Transaction History | `./docs/screenshots/transactions.png` |
+
+## API Endpoints
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/` | Health check endpoint |
+| POST | `/auth/*` | Authentication-related endpoints |
+| GET | `/wallet/balance` | Fetch the authenticated user’s wallet balance |
+| POST | `/wallet/topup` | Add funds to the wallet using an idempotency key |
+| POST | `/wallet/transfer` | Transfer funds to another user using an idempotency key |
+| GET | `/transaction/transactions` | List the authenticated user’s transactions |
+| GET | `/transaction/transactions/:id` | Fetch a transaction by ID |
+| POST | `/transaction/transactions/:id/refund` | Refund a transaction |
+| POST | `/payment/*` | Payment initiation and related routes |
+| POST | `/webhooks/*` | Payment webhook endpoints |
+| POST | `/merchant/*` | Merchant-related routes |
+| POST | `/admin/*` | Admin and management routes |
+
+## Architecture Flow
+
+```text
+User
+  |
+  v
+React Frontend
+  |
+  |-- login / session handling
+  |-- wallet actions
+  |-- transfer / top-up requests
+  v
+Express API
+  |
+  |-- auth middleware
+  |-- validation
+  |-- rate limiting
+  |-- route handlers
+  v
+Service Layer
+  |
+  |-- idempotency checks
+  |-- wallet locking
+  |-- ledger entry creation
+  |-- transaction state updates
+  |-- webhook verification
+  v
+PostgreSQL + Prisma
+  |
+  |-- users
+  |-- wallets
+  |-- transactions
+  |-- ledger entries
+  |-- idempotency records
+  |-- payment orders
+```
+
+## How It Works
+
+1. The frontend sends authenticated requests to the backend.
+2. Top-up and transfer requests are guarded by an `idempotency-key`.
+3. The backend validates the request and starts a database transaction.
+4. Wallet rows are locked before balances are updated.
+5. Ledger entries are written in the same transaction.
+6. Webhooks confirm payment status and finalize pending operations.
+7. The frontend refreshes wallet and transaction state after success.
+
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -58,13 +149,9 @@ npm install
 npm run dev
 ```
 
-### Run everything
-If the project is configured as a monorepo, start the backend and frontend in separate terminals.
+### Environment variables
 
-## Environment Variables
-
-Create a `.env` file in the backend with values similar to these:
-
+Backend example:
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/payment_gateway"
 JWT_SECRET="your_jwt_secret"
@@ -73,8 +160,7 @@ CLIENT_URL="http://localhost:5173"
 PORT=3000
 ```
 
-Depending on your payment provider integration, you may also need:
-
+If required by your payment provider integration:
 ```env
 PAYMENT_PROVIDER_KEY="your_provider_key"
 WEBHOOK_SECRET="your_webhook_secret"
@@ -103,24 +189,7 @@ WEBHOOK_SECRET="your_webhook_secret"
 └── Readme.md
 ```
 
-## API Endpoints
-
-| Method | Route | Description |
-|---|---|---|
-| GET | `/` | Health check / server status |
-| POST | `/auth/*` | Authentication routes |
-| GET | `/wallet/balance` | Get the authenticated user’s wallet balance |
-| POST | `/wallet/topup` | Add money to the wallet using an idempotency key |
-| POST | `/wallet/transfer` | Transfer money to another user using an idempotency key |
-| GET | `/transaction/transactions` | Get all transactions for the authenticated user |
-| GET | `/transaction/transactions/:id` | Get a transaction by ID |
-| POST | `/transaction/transactions/:id/refund` | Refund a transaction |
-| POST | `/webhooks/*` | Payment webhook endpoints |
-| POST | `/payment/*` | Payment-related routes |
-| POST | `/merchant/*` | Merchant-related routes |
-| POST | `/admin/*` | Admin-related routes |
-
-## Usage Examples for Endpoints
+## Example API Usage
 
 ### Get wallet balance
 ```bash
@@ -146,55 +215,36 @@ curl -X POST http://localhost:3000/wallet/transfer \
   -d '{"recipientId":"user_2","amount":500}'
 ```
 
-### Fetch transactions
+### View transactions
 ```bash
 curl -X GET http://localhost:3000/transaction/transactions \
   -H "Authorization: Bearer <token>"
 ```
 
-## Architecture Flow
+## Why This Project Stands Out
 
-```text
-Frontend (React)
-   |
-   |-- login / auth
-   |-- fetch balance
-   |-- top-up / transfer with idempotency-key
-   v
-Backend API (Express + TypeScript)
-   |
-   |-- Auth middleware
-   |-- Rate limiting
-   |-- Transaction / Wallet / Payment routes
-   v
-Service Layer
-   |
-   |-- Idempotency check
-   |-- Wallet locking
-   |-- Ledger entry creation
-   |-- Transaction status updates
-   |-- Webhook confirmation
-   v
-PostgreSQL + Prisma
-   |
-   |-- Wallet balances
-   |-- Transactions
-   |-- Ledger entries
-   |-- Idempotency records
-   |-- Payment orders
-```
+- Demonstrates real-world payment flow design
+- Shows how to protect balance updates with transactions and locks
+- Highlights idempotent API design for financial systems
+- Includes webhook-based state confirmation
+- Suitable for backend portfolio, fintech demos, and engineering interviews
 
-## How It Works
+## Roadmap
 
-1. The frontend sends authenticated requests to the backend.
-2. For top-ups and transfers, the backend first checks the `idempotency-key`.
-3. Wallet rows are locked before balance updates to prevent double spending.
-4. Debit and credit ledger entries are created inside the same transaction.
-5. Payment webhooks confirm pending payments and update transaction/order status.
-6. The UI refreshes wallet balance and recent transactions after each successful operation.
+- Add richer dashboard analytics
+- Expand webhook event coverage
+- Improve test coverage and CI automation
+- Add more merchant tooling and settlement visibility
 
-## Notes
+## Contributing
 
-- The backend starts a settlement job on startup.
-- The app seeds required system wallets automatically.
-- The project uses a wallet + ledger model for reliable balance tracking.
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Open a pull request
+
+## License
+
+This project is licensed under the MIT License.
